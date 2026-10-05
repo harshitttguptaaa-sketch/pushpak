@@ -26,7 +26,7 @@ Rules:
 Format for points cards, plain text, under 120 words, no markdown symbols, no em dashes:
 Line 1: "Best value on these figures: <route name>, about Rs <low value>."
 Line 2: one sentence on why, and one sentence on the main condition or caveat for that route.
-Then "Next steps:" followed by three short numbered steps, the last one being to redeem on the bank's own site or app.
+Then "Next steps:" followed by three short numbered steps specific to the best route. Do not tell the visitor to check a balance they have already entered. The last step must name where the redemption is completed: the bank's own site or app for bank routes, or the partner app or loyalty programme where the points are actually spent (for example the Tata Neu app, or the hotel or airline programme after a transfer).
 If a QUESTION is present and allowed, answer it in one sentence before "Next steps:".`;
 
 function sendJson(res, status, body) {
