@@ -6,7 +6,7 @@
 const crypto = require("crypto");
 const { CARDS, VERIFIED, valueRoutes } = require("./_cards.js");
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 const MAX_OUTPUT_TOKENS = 300;
 const VISITOR_DAILY_CAP = 5;
 const IP_DAILY_CAP = 15;
@@ -107,28 +107,42 @@ module.exports = async function handler(req, res) {
   };
   const userText = `DATA:\n${JSON.stringify(data, null, 2)}\n\nQUESTION: ${question || "(none)"}`;
 
-  const generationConfig = { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.3 };
-  if (MODEL.includes("2.5")) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  function config(withThinking) {
+    const c = { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.3 };
+    if (withThinking) {
+      if (MODEL.includes("2.5")) c.thinkingConfig = { thinkingBudget: 0 };
+      else if (/gemini-3/.test(MODEL)) c.thinkingConfig = { thinkingLevel: "minimal" };
+    }
+    return c;
+  }
 
-  let explanation, inTok = null, outTok = null;
-  try {
+  async function callGemini(withThinking) {
     const g = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [{ role: "user", parts: [{ text: userText }] }],
-        generationConfig
+        generationConfig: config(withThinking)
       })
     });
-    const gj = await g.json();
-    if (!g.ok) throw new Error(gj.error ? gj.error.message : `Gemini error ${g.status}`);
-    explanation = (gj.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
-    inTok = gj.usageMetadata?.promptTokenCount ?? null;
-    outTok = gj.usageMetadata?.candidatesTokenCount ?? null;
-    if (!explanation) throw new Error("Empty response from Gemini");
+    const gj = await g.json().catch(() => ({}));
+    return { ok: g.ok, status: g.status, gj };
+  }
+
+  let explanation, inTok = null, outTok = null;
+  try {
+    let r = await callGemini(true);
+    // If this model rejects the thinking setting, retry once without it
+    if (!r.ok && r.status === 400 && /thinking/i.test(JSON.stringify(r.gj))) r = await callGemini(false);
+    if (!r.ok) throw new Error(`Gemini ${r.status}: ${r.gj.error ? r.gj.error.message : "no details"}`);
+    explanation = (r.gj.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("").trim();
+    inTok = r.gj.usageMetadata?.promptTokenCount ?? null;
+    outTok = r.gj.usageMetadata?.candidatesTokenCount ?? null;
+    if (!explanation) throw new Error(`Gemini returned no text (finish reason: ${r.gj.candidates?.[0]?.finishReason || "unknown"})`);
   } catch (e) {
-    return sendJson(res, 502, { error: "The explainer is not responding right now. Try again in a minute." });
+    console.error("Gemini call failed:", e.message);
+    return sendJson(res, 502, { error: "The explainer is not responding right now. Try again in a minute.", detail: String(e.message).slice(0, 300) });
   }
 
   const refused = explanation.startsWith("Pushpak doesn't cover that yet");
