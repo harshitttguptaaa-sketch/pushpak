@@ -445,7 +445,7 @@
   }
 
   function render(d) {
-    var html = "<h3>" + esc(Number(d.points).toLocaleString("en-IN")) + " " + esc(d.currency) + " on " + esc(d.card) + "</h3>";
+    var html = d.type === "cashback" ? "<h3>" + esc(d.card) + "</h3>" : "<h3>" + esc(Number(d.points).toLocaleString("en-IN")) + " " + esc(d.currency) + " on " + esc(d.card) + "</h3>";
     if (d.routes && d.routes.length) {
       html += '<div class="table-scroll"><table class="rt"><thead><tr><th scope="col">Route</th><th scope="col" style="text-align:right">Value</th></tr></thead><tbody>';
       d.routes.forEach(function (r) {
