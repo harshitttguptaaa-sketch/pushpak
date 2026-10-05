@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pushpak: what your card points are worth in rupees</title>
+<meta name="description" content="Pushpak shows what your credit card reward points are worth in rupees across every way to redeem them, with fees, limits and the bank's source beside each figure. No card numbers, no bank logins.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪁</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #13203B;
+    --peacock: #0A6C6E;
+    --marigold: #F2A20C;
+    --mist: #EDF2F7;
+    --paper: #FFFFFF;
+    --muted: #556079;
+    --line: #D5DDE8;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --board: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { max-width: 100%; }
+  a { color: var(--peacock); }
+  :focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; border-radius: 4px; }
+
+  .wrap { width: min(1120px, 100% - 2.5rem); margin-inline: auto; }
+
+  /* Header */
+  .top { padding: 1.25rem 0; }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .brand { font-family: var(--display); font-weight: 800; font-size: 1.5rem; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
+  .top nav a { font-weight: 500; text-decoration: none; color: var(--ink); margin-left: 1.5rem; }
+  .top nav a:hover { color: var(--peacock); }
+
+  /* Buttons */
+  .btn {
+    display: inline-block;
+    font-family: var(--body);
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: 999px;
+    text-decoration: none;
+    border: 2px solid var(--ink);
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: var(--peacock); border-color: var(--peacock); }
+  .btn-quiet { background: transparent; color: var(--ink); }
+  .btn-quiet:hover { background: var(--mist); }
+
+  /* Hero */
+  .hero { padding: 3rem 0 5rem; }
+  .hero .wrap { display: grid; grid-template-columns: 1.05fr 1fr; gap: 3.5rem; align-items: center; }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.4rem, 5.2vw, 4rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    margin: 0 0 1.5rem;
+  }
+  .hero .lede { font-size: 1.2rem; color: var(--muted); max-width: 34rem; margin: 0 0 2rem; }
+  .hero .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .hero .fine { font-size: 0.9rem; color: var(--muted); margin-top: 1.25rem; }
+
+  /* The redemption board: the one bold element */
+  .board {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 18px;
+    padding: 1.6rem 1.6rem 1.25rem;
+    box-shadow: 0 30px 60px -30px rgba(19, 32, 59, 0.55);
+  }
+  .board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .board-head .card-name { font-family: var(--display); font-weight: 700; font-size: 1.15rem; }
+  .board-head .bal { font-family: var(--board); color: var(--marigold); font-size: 1.15rem; }
+  .route {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .route .name { font-weight: 500; }
+  .route .note { grid-column: 1 / -1; font-size: 0.85rem; color: #A9B4C9; }
+  .route .val { font-family: var(--board); font-size: 1.15rem; text-align: right; font-variant-numeric: tabular-nums; }
+  .route.best { background: rgba(242, 162, 12, 0.12); margin: 0 -0.75rem; padding-inline: 0.75rem; border-radius: 10px; border-bottom-color: transparent; }
+  .route.best .val { color: var(--marigold); }
+  .tag { display: inline-block; font-size: 0.75rem; font-weight: 600; background: var(--marigold); color: var(--ink); padding: 0.1rem 0.5rem; border-radius: 999px; margin-left: 0.5rem; vertical-align: 2px; }
+  .board-foot { font-size: 0.8rem; color: #A9B4C9; padding-top: 0.9rem; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .route { animation: flip 0.5s ease-out both; transform-origin: top; }
+    .route:nth-of-type(1) { animation-delay: 0.15s; }
+    .route:nth-of-type(2) { animation-delay: 0.3s; }
+    .route:nth-of-type(3) { animation-delay: 0.45s; }
+    .route:nth-of-type(4) { animation-delay: 0.6s; }
+    @keyframes flip { from { opacity: 0; transform: rotateX(-80deg); } to { opacity: 1; transform: none; } }
+  }
+
+  /* Sections */
+  section { padding: 5rem 0; }
+  section h2 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(1.9rem, 3.6vw, 2.75rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+    max-width: 22ch;
+  }
+  section .intro { color: var(--muted); max-width: 40rem; margin: 0 0 3rem; }
+  .tint { background: var(--mist); }
+
+
+  /* Try it */
+  .try-grid { display: grid; grid-template-columns: 1fr 1.25fr; gap: 3rem; align-items: start; }
+  .try-grid > * { min-width: 0; }
+  .stats { display: flex; flex-wrap: wrap; gap: 2.5rem; margin: 0 0 2rem; }
+  .stat .num { font-family: var(--board); font-size: 1.9rem; color: var(--ink); display: block; line-height: 1.2; }
+  .stat .lbl { color: var(--muted); font-size: 0.9rem; }
+  .stats-note { font-size: 0.8rem; color: var(--muted); margin: -1.25rem 0 2rem; }
+  form.tool { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem; }
+  form.tool label { display: block; font-weight: 600; margin: 0 0 0.35rem; }
+  form.tool .hint { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+  form.tool select, form.tool input, form.tool textarea {
+    width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
+    border: 1px solid #B9C4D4; border-radius: 10px; padding: 0.7rem 0.8rem; margin-bottom: 1.1rem; background: var(--paper);
+  }
+  form.tool textarea { min-height: 4.5rem; resize: vertical; }
+  form.tool button { cursor: pointer; width: 100%; }
+  form.tool button[disabled] { opacity: 0.6; cursor: wait; }
+  .privacy-line { font-size: 0.82rem; color: var(--muted); margin: 0.9rem 0 0; }
+  .result { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem; min-height: 12rem; }
+  .result.empty { display: flex; align-items: center; color: var(--muted); }
+  .result h3 { font-family: var(--display); font-size: 1.35rem; margin: 0 0 1rem; }
+  .rt { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin-bottom: 1.25rem; }
+  .rt th { text-align: left; font-weight: 600; color: var(--muted); font-size: 0.82rem; padding: 0 0.5rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+  .rt td { padding: 0.7rem 0.5rem 0.7rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .rt td.v { font-family: var(--board); white-space: nowrap; text-align: right; padding-right: 0; }
+  .rt tr.is-best td { background: rgba(242, 162, 12, 0.13); }
+  .rt .rnote { display: block; color: var(--muted); font-size: 0.82rem; margin-top: 0.2rem; }
+  .kind { font-size: 0.72rem; font-weight: 600; border-radius: 999px; padding: 0.05rem 0.45rem; margin-left: 0.35rem; white-space: nowrap; }
+  .kind.fixed { background: #DCEFEF; color: var(--peacock); }
+  .kind.estimate { background: #FCEBC8; color: #7A5200; }
+  .explain { white-space: pre-line; background: var(--mist); border-radius: 10px; padding: 1rem 1.1rem; margin: 0 0 1rem; }
+  .meta { font-size: 0.82rem; color: var(--muted); margin: 0.3rem 0 0; overflow-wrap: anywhere; }
+  .err { color: #9B1C1C; font-weight: 500; }
+  .table-scroll { overflow-x: auto; }
+
+  /* Problem */
+  .problems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
+  .problems h3 { font-family: var(--display); font-size: 1.3rem; margin: 0 0 0.5rem; }
+  .problems p { margin: 0; color: var(--muted); }
+
+  /* Steps: a real sequence, so numbered */
+  .steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; counter-reset: step; }
+  .steps li { counter-increment: step; border-top: 3px solid var(--ink); padding-top: 1rem; }
+  .steps li::before { content: counter(step); font-family: var(--display); font-weight: 800; font-size: 2.2rem; color: var(--peacock); display: block; line-height: 1; margin-bottom: 0.75rem; }
+  .steps h3 { font-size: 1.1rem; margin: 0 0 0.4rem; }
+  .steps p { margin: 0; color: var(--muted); font-size: 0.98rem; }
+
+  /* Trust */
+  .trust { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: start; }
+  .trust ul { list-style: none; padding: 0; margin: 0; }
+  .trust li { padding: 1.1rem 0; border-bottom: 1px solid var(--line); }
+  .trust li:first-child { padding-top: 0; }
+  .trust li strong { display: block; font-size: 1.05rem; margin-bottom: 0.2rem; }
+  .trust li span { color: var(--muted); }
+  .figure-card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem; }
+  .figure-card .lbl { color: var(--muted); font-size: 0.9rem; margin: 0; }
+  .figure-card .big { font-family: var(--board); font-size: 2rem; margin: 0.25rem 0 1rem; color: var(--ink); }
+  .figure-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; font-size: 0.92rem; }
+  .figure-card dt { color: var(--muted); }
+  .figure-card dd { margin: 0; }
+  .figure-card .caption { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; }
+
+  /* Founder note */
+  .note-block { max-width: 44rem; }
+  .note-block blockquote { margin: 0; font-size: 1.15rem; line-height: 1.7; border-left: 4px solid var(--marigold); padding-left: 1.5rem; }
+  .note-block blockquote p { margin: 0 0 1rem; }
+  .note-block cite { display: block; font-style: normal; color: var(--muted); margin-top: 1rem; padding-left: 1.75rem; }
+
+  /* CTA */
+  .cta { background: var(--ink); color: var(--paper); }
+  .cta .wrap { display: grid; grid-template-columns: 1.3fr 1fr; gap: 3rem; align-items: center; }
+  .cta h2 { color: var(--paper); }
+  .cta p { color: #C4CCDB; margin: 0; }
+  .cta .btn-primary { background: var(--marigold); color: var(--ink); border-color: var(--marigold); }
+  .cta .btn-primary:hover { background: var(--paper); border-color: var(--paper); }
+  .cta .ask { margin-top: 1rem; font-size: 0.95rem; }
+
+  footer { padding: 2.5rem 0; font-size: 0.9rem; color: var(--muted); }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; }
+  footer p { margin: 0; max-width: 40rem; }
+
+  @media (max-width: 900px) {
+    .hero .wrap, .trust, .cta .wrap, .try-grid { grid-template-columns: 1fr; }
+    .problems { grid-template-columns: 1fr; gap: 1.75rem; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    section { padding: 3.5rem 0; }
+    .hero { padding-bottom: 3.5rem; }
+  }
+  @media (max-width: 560px) {
+    .steps { grid-template-columns: 1fr; }
+    .top nav a:not(.btn) { display: none; }
+    .board { padding: 1.25rem 1.1rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">Pushpak</a>
+    <nav>
+      <a href="#try">Try it</a>
+      <a href="#how">How it works</a>
+      <a href="#trust">Privacy</a>
+      <a class="btn btn-quiet" href="#beta">Join the beta</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div>
+        <h1 id="hero-title">Your card app shows your points. Pushpak shows what they're worth in rupees.</h1>
+        <p class="lede">Pick your card, enter your points balance and see every way to redeem them side by side, after fees, with the bank's source and a "last verified" date beside each figure.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#try">Value your points</a>
+          <a class="btn btn-quiet" href="#beta">Join the free beta</a>
+        </div>
+        <p class="fine">No card numbers. No bank logins. You redeem with your bank, not with us.</p>
+      </div>
+
+      <div class="board" role="img" aria-label="Illustration of the Pushpak comparison: one card's points valued across four redemption routes, with airline transfer highlighted as best value. Figures are made up.">
+        <div class="board-head">
+          <span class="card-name">Example card</span>
+          <span class="bal">40,000 pts</span>
+        </div>
+        <div class="route best">
+          <span class="name">Airline transfer <span class="tag">Best value on these figures</span></span>
+          <span class="val">₹18,000*</span>
+          <span class="note">Estimate. Depends on the flight, seat availability and taxes.</span>
+        </div>
+        <div class="route">
+          <span class="name">Hotel transfer</span>
+          <span class="val">₹12,000*</span>
+          <span class="note">Estimate. Depends on property and dates.</span>
+        </div>
+        <div class="route">
+          <span class="name">Shopping vouchers</span>
+          <span class="val">₹10,000</span>
+          <span class="note">Only worth this if you'd spend at the brand anyway.</span>
+        </div>
+        <div class="route">
+          <span class="name">Statement credit</span>
+          <span class="val">₹8,000</span>
+          <span class="note">Lowest value, but straight off your bill.</span>
+        </div>
+        <p class="board-foot">Illustration with made-up figures, not any real card's rates. * Transfer values are estimates.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <section id="try" class="tint" aria-labelledby="try-title">
+    <div class="wrap">
+      <h2 id="try-title">What are your points worth? Try it with a real card.</h2>
+      <p class="intro">Pick one of the six cards in the beta and enter the balance from your bank app. Pushpak values every route from the bank's published terms, and an AI explainer tells you what to do next.</p>
+      <div class="stats" aria-live="polite">
+        <div class="stat"><span class="num" id="stat-count">0</span><span class="lbl">balances valued so far</span></div>
+        <div class="stat"><span class="num" id="stat-total">₹0</span><span class="lbl">in rupee value identified</span></div>
+      </div>
+      <p class="stats-note">Rupee value identified adds up the lowest value of the best route for every balance valued on this page.</p>
+      <div class="try-grid">
+        <form class="tool" id="tool" novalidate>
+          <label for="card">Your card</label>
+          <select id="card" name="card" required>
+            <option value="">Choose a card</option>
+            <option value="hsbc-travelone">HSBC TravelOne</option>
+            <option value="axis-horizon">Axis Bank Horizon</option>
+            <option value="hdfc-marriott-bonvoy">Marriott Bonvoy HDFC Bank</option>
+            <option value="hdfc-regalia-gold">HDFC Bank Regalia Gold</option>
+            <option value="hdfc-tata-neu-infinity">Tata Neu Infinity HDFC Bank</option>
+            <option value="sbi-cashback">CASHBACK SBI Card</option>
+          </select>
+          <label for="points">Points balance <span class="hint">(as shown in your bank app)</span></label>
+          <input id="points" name="points" type="number" inputmode="numeric" min="0" max="10000000" step="1" placeholder="e.g. 25000" required>
+          <label for="question">One question <span class="hint">(optional)</span></label>
+          <textarea id="question" name="question" maxlength="300" placeholder="e.g. Is it worth waiting to transfer?"></textarea>
+          <button class="btn btn-primary" type="submit" id="go">Show what it's worth</button>
+          <p class="privacy-line">No card number, no login, no name. Five free valuations a day.</p>
+        </form>
+        <div class="result empty" id="result" aria-live="polite">Your valuation will appear here.</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="problem-title">
+    <div class="wrap">
+      <h2 id="problem-title">The same points can be worth very different amounts.</h2>
+      <p class="intro">Most people redeem the way the bank app makes easiest, because working out the alternatives takes too long. The information exists. It just isn't built for someone with two minutes at checkout.</p>
+      <div class="problems">
+        <div>
+          <h3>Too long to read</h3>
+          <p>The real answers sit in 40-minute videos and 300-comment threads. You need one line, not a research project.</p>
+        </div>
+        <div>
+          <h3>Out of date</h3>
+          <p>Banks change earn rates, caps and transfer ratios often. Last year's advice can be wrong today, and most guides never say when they were checked.</p>
+        </div>
+        <div>
+          <h3>Not about your cards</h3>
+          <p>Blogs rank the "best cards" in general. None of them tell you what the points already sitting on your card are worth.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="tint" aria-labelledby="how-title">
+    <div class="wrap">
+      <h2 id="how-title">From points balance to a decision in under five minutes.</h2>
+      <p class="intro">Pushpak works from your card name and your points balance. That is all it needs.</p>
+      <ol class="steps">
+        <li>
+          <h3>Pick your card</h3>
+          <p>Choose it from the supported list. The beta starts with a small set of popular cards.</p>
+        </li>
+        <li>
+          <h3>Enter your balance</h3>
+          <p>Type in the points you see in your bank app. Nothing is pulled from your account.</p>
+        </li>
+        <li>
+          <h3>Compare every route</h3>
+          <p>Statement credit, vouchers, airline and hotel transfers, side by side in rupees after fees, with the best value on those figures highlighted.</p>
+        </li>
+        <li>
+          <h3>Redeem with your bank</h3>
+          <p>Choose what suits you and follow the checklist and link to your bank's own redemption page.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="trust" aria-labelledby="trust-title">
+    <div class="wrap trust">
+      <div>
+        <h2 id="trust-title">Every figure shows where it came from.</h2>
+        <ul>
+          <li><strong>Sourced and dated</strong><span>Each value carries the bank's published source and the date it was last verified, so you can check it yourself.</span></li>
+          <li><strong>Honest about estimates</strong><span>Airline and hotel transfer values depend on the booking, availability and charges, so they are labelled as estimates.</span></li>
+          <li><strong>No card numbers, CVVs or bank logins</strong><span>Pushpak never asks for them. Your card name and balance are enough.</span></li>
+          <li><strong>Your data is not for sale</strong><span>We don't sell user data, and we don't rank options by what pays us.</span></li>
+        </ul>
+      </div>
+      <div class="figure-card" aria-label="Example of how a single figure is shown">
+        <p class="lbl">Statement credit, example card</p>
+        <p class="big">₹8,000</p>
+        <dl>
+          <dt>Fees</dt><dd>Redemption fee deducted</dd>
+          <dt>Minimum</dt><dd>Bank's minimum redemption applied</dd>
+          <dt>Source</dt><dd>Bank's rewards terms page</dd>
+          <dt>Last verified</dt><dd>Date shown on every figure</dd>
+        </dl>
+        <p class="caption">Layout example with made-up figures.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tint" aria-labelledby="note-title">
+    <div class="wrap note-block">
+      <h2 id="note-title">Why we're building Pushpak</h2>
+      <blockquote>
+        <p>Your credit card app shows your points balance. But what can you redeem it for in rupees, after fees?</p>
+        <p>The same points can go to statement credit, vouchers, or airline and hotel transfers, and each route comes with its own fees, minimums and limits. The answer is spread across your bank's site.</p>
+        <p>Pushpak puts those routes side by side, with the bank's source and the date we last checked it. Then you redeem through your bank, not through us.</p>
+        <p>We named it after the Pushpaka Vimana, the flying chariot from the Ramayana. Your points are meant to take you places.</p>
+      </blockquote>
+      <cite>The Pushpak founding team</cite>
+    </div>
+  </section>
+
+  <section id="beta" class="cta" aria-labelledby="beta-title">
+    <div class="wrap">
+      <div>
+        <h2 id="beta-title">Hold two to four Indian credit cards? Try the beta.</h2>
+        <p>It's free. Tell us where the comparison needs work, and which card we should add next.</p>
+      </div>
+      <div>
+        <a class="btn btn-primary" href="mailto:harshitttguptaaa@gmail.com?subject=Pushpak%20beta&amp;body=Cards%20I%20hold%3A%20">Join the free beta</a>
+        <p class="ask">What was the most confusing part of your last points redemption?</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#">Pushpak</a>
+    <p>Pushpak provides information, not financial advice. Values are based on published bank terms and may change. Transfer values are estimates.</p>
+  </div>
+</footer>
+
+
+<script>
+(function () {
+  var inr = function (n) { return "₹" + Number(n).toLocaleString("en-IN"); };
+  var esc = function (t) { var d = document.createElement("div"); d.textContent = t == null ? "" : String(t); return d.innerHTML; };
+
+  function visitorId() {
+    var id = null;
+    try { id = localStorage.getItem("pushpak_vid"); } catch (e) {}
+    if (!id) {
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(36).slice(2);
+      try { localStorage.setItem("pushpak_vid", id); } catch (e) {}
+    }
+    return id;
+  }
+  var VID = visitorId();
+
+  function loadStats() {
+    fetch("/api/stats").then(function (r) { return r.json(); }).then(function (s) {
+      if (s.error) return;
+      document.getElementById("stat-count").textContent = Number(s.balancesValued).toLocaleString("en-IN");
+      document.getElementById("stat-total").textContent = inr(Math.round(s.totalValueInr));
+    }).catch(function () {});
+  }
+
+  function render(d) {
+    var html = "<h3>" + esc(Number(d.points).toLocaleString("en-IN")) + " " + esc(d.currency) + " on " + esc(d.card) + "</h3>";
+    if (d.routes && d.routes.length) {
+      html += '<div class="table-scroll"><table class="rt"><thead><tr><th scope="col">Route</th><th scope="col" style="text-align:right">Value</th></tr></thead><tbody>';
+      d.routes.forEach(function (r) {
+        var val = !r.eligible ? "Below minimum" : (r.low === r.high ? inr(r.low) : inr(r.low) + " to " + inr(r.high));
+        html += '<tr class="' + (r.name === d.best && !d.refused ? "is-best" : "") + '"><td>' + esc(r.name) +
+          '<span class="kind ' + esc(r.kind) + '">' + (r.kind === "fixed" ? "Bank rate" : "Estimate") + "</span>" +
+          '<span class="rnote">' + esc(r.note) + "</span></td><td class=\"v\">" + val + "</td></tr>";
+      });
+      html += "</tbody></table></div>";
+    }
+    html += '<div class="explain">' + esc(d.explanation) + "</div>";
+    html += '<p class="meta">' + esc(d.cardNote) + "</p>";
+    html += '<p class="meta">Sources, last verified ' + esc(d.verified) + ": " + d.sources.map(function (u, i) {
+      return '<a href="' + esc(u) + '" target="_blank" rel="noopener">source ' + (i + 1) + "</a>"; }).join(", ") +
+      ". Information, not financial advice.</p>";
+    var box = document.getElementById("result");
+    box.classList.remove("empty");
+    box.innerHTML = html;
+  }
+
+  document.getElementById("tool").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var card = document.getElementById("card").value;
+    var points = document.getElementById("points").value;
+    var box = document.getElementById("result");
+    if (!card || points === "") {
+      box.classList.add("empty");
+      box.innerHTML = '<span class="err">Choose a card and enter your points balance.</span>';
+      return;
+    }
+    var btn = document.getElementById("go");
+    btn.disabled = true; btn.textContent = "Valuing your points";
+    fetch("/api/value", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ card: card, points: points, question: document.getElementById("question").value, visitorId: VID })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) { box.classList.add("empty"); box.innerHTML = '<span class="err">' + esc(d.error) + "</span>"; }
+      else { render(d); loadStats(); }
+    }).catch(function () {
+      box.classList.add("empty");
+      box.innerHTML = '<span class="err">Could not reach Pushpak. Check your connection and try again.</span>';
+    }).finally(function () { btn.disabled = false; btn.textContent = "Show what it's worth"; });
+  });
+
+  loadStats();
+})();
+</script>
+</body>
+</html>
